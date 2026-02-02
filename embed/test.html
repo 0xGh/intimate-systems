@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>WebRenderer Embed Demo</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                background: #111;
+                font-family: monospace;
+            }
+            #controls {
+                padding: 10px;
+                background: #222;
+                color: #aaa;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            #controls input {
+                flex: 1;
+                padding: 6px;
+                background: #333;
+                border: 1px solid #444;
+                color: #fff;
+                font-family: inherit;
+            }
+            #controls button {
+                padding: 6px 12px;
+                background: #444;
+                border: none;
+                color: #fff;
+                cursor: pointer;
+            }
+            #controls button:hover {
+                background: #555;
+            }
+            #route {
+                color: #6f6;
+            }
+            #container {
+                width: 100%;
+                height: calc(100% - 40px);
+            }
+            #error {
+                color: #f66;
+                padding: 20px;
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="controls">
+            <label>RPC:</label>
+            <input type="text" id="rpc" placeholder="http://127.0.0.1:8545" style="width: 200px; flex: none" />
+            <label>Contract:</label>
+            <input type="text" id="contract" placeholder="0x..." />
+            <label>Route:</label>
+            <span id="route">/</span>
+            <button onclick="reload()">Reload</button>
+        </div>
+        <div id="container"></div>
+        <div id="error"></div>
+
+        <script src="intimate-embed.js"></script>
+        <script>
+            const params = new URLSearchParams(location.search);
+            const rpcInput = document.getElementById("rpc");
+            const contractInput = document.getElementById("contract");
+            const routeSpan = document.getElementById("route");
+            const errorDiv = document.getElementById("error");
+
+            rpcInput.value = params.get("rpc") || "http://127.0.0.1:8545";
+            contractInput.value = params.get("contract") || "";
+
+            let embed = null;
+
+            function init() {
+                const rpc = rpcInput.value.trim();
+                const contract = contractInput.value.trim();
+                const route = params.get("isroute") || "/";
+
+                if (!contract || !/^0x[a-fA-F0-9]{40}$/.test(contract)) {
+                    errorDiv.textContent = "Enter a valid contract address";
+                    errorDiv.style.display = "block";
+                    return;
+                }
+
+                errorDiv.style.display = "none";
+
+                if (embed) embed.frame.remove();
+
+                embed = new IntimateEmbed({
+                    container: "#container",
+                    contract: contract,
+                    rpc: rpc,
+                    route: route,
+                    onNavigate: function (r) {
+                        routeSpan.textContent = r;
+                        const url = new URL(location.href);
+                        url.searchParams.set("isroute", r);
+                        history.pushState({}, "", url);
+                    },
+                });
+            }
+
+            function reload() {
+                const url = new URL(location.href);
+                url.searchParams.set("rpc", rpcInput.value.trim());
+                url.searchParams.set("contract", contractInput.value.trim());
+                location.href = url;
+            }
+
+            rpcInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") reload();
+            });
+            contractInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") reload();
+            });
+
+            if (contractInput.value) init();
+        </script>
+    </body>
+</html>
